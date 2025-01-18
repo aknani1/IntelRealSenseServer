@@ -12,9 +12,9 @@ def init_routes(app):
         try:
             # Parse the JSON payload from the client
             data = request.json
-            module = data.get('module')  # 'depth' or 'rgb'
-            resolution = data.get('resolution')  # e.g., '640x480'
-            frame_rate = int(data.get('frame_rate'))  # e.g., 30
+            module = data.get('module')
+            resolution = data.get('resolution') 
+            frame_rate = int(data.get('frame_rate'))
             print(data)
             # Validate the input
             if not module or not resolution or not frame_rate:
@@ -43,7 +43,58 @@ def init_routes(app):
         except Exception as e:
             print(f"Error: {e}")
             return jsonify({"error": str(e)}), 500
-        
+    @app.route('/api/exposure', methods=['POST'])
+    def update_exposure():
+        try:
+            # Parse the JSON payload from the client
+            data = request.json
+            module = data.get('module')  # 'depth' or 'rgb'
+            exposure_value = int(data.get('exposure'))  # Exposure value (e.g., 8500)
+            print(data)
+            # Validate input
+            if not module or exposure_value is None:
+                return jsonify({"error": "Invalid input"}), 400
+    
+            # Get active RealSense device
+            device = pipeline.get_active_profile().get_device()
+            sensors = device.query_sensors()
+    
+            if module == 'depth':
+                # Ensure depth sensor exists
+                if len(sensors) < 1:
+                    return jsonify({"error": "Depth sensor not found"}), 500
+    
+                depth_sensor = sensors[0]  # Assuming depth is the first sensor
+                if rs.option.exposure in depth_sensor.get_supported_options():
+                    depth_sensor.set_option(rs.option.exposure, exposure_value)
+                    print(f"Depth Module exposure updated to {exposure_value}")
+                else:
+                    return jsonify({"error": "Exposure option not supported for Depth Module"}), 400
+    
+            elif module == 'rgb':
+                # Ensure RGB sensor exists
+                if len(sensors) < 2:
+                    return jsonify({"error": "RGB sensor not found"}), 500
+    
+                rgb_sensor = sensors[1]  # Assuming RGB is the second sensor
+                if rs.option.exposure in rgb_sensor.get_supported_options():
+                    rgb_sensor.set_option(rs.option.exposure, exposure_value)
+                    print(f"RGB Camera exposure updated to {exposure_value}")
+                else:
+                    return jsonify({"error": "Exposure option not supported for RGB Camera"}), 400
+    
+            else:
+                return jsonify({"error": "Invalid module"}), 400
+    
+            return jsonify({
+                "message": f"{module.capitalize()} Module exposure updated",
+                "exposure": exposure_value
+            }), 200
+    
+        except Exception as e:
+            print(f"Error: {e}")
+            return jsonify({"error": str(e)}), 500
+
     @socketio.on('connect')
     def handle_connect():
         
