@@ -7,7 +7,7 @@ from .camera import streaming
 from .camera import framerate
 from .camera import exposure_value
 from .camera import change_exposure
-
+from .camera import toggle_metadata
 
 
 pipeline = rs.pipeline()
@@ -58,6 +58,16 @@ def init_routes(app):
         except Exception as e:
             print(f"Error: {e}")
             return jsonify({"error": str(e)}), 500
+
+    @app.route('/api/toggle_metadata', methods=['POST'])
+    def toggle_metadata_endpoint():
+        data = request.json
+        module = data.get('module')
+        if module not in ['rgb', 'depth']:
+            return jsonify({"error": "Invalid module"}), 400
+        
+        toggle_metadata(module)
+        return jsonify({"message": f"{module.capitalize()} metadata toggled", "status": metadata_toggles[module]})
 
     @app.route('/api/exposure', methods=['POST'])
     def update_exposure():
